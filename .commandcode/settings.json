@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(python ingestion/parser.py)",
+      "Shell(.venvScriptspython.exe:*)",
+      "Shell(.venv\\Scripts\\python.exe ingestion\\parser.py 2>$null | Select-Object -First 20)",
+      "Shell(.venv\\Scripts\\python.exe ingestion\\parser.py > \"$env:COMMANDCODE_SCRATCHPAD\\out.md\" 2> \"$env:COMMANDCODE_SCRATCHPAD\\err.log\"; echo \"EXIT=$LASTEXITCODE\")",
+      "powershell",
+      "Shell(tasklist:*)",
+      "Shell(echo probe > C:\\Users\\sreek\\__probe_outside.txt && echo WROTE_OK && del C:\\Users\\sreek\\__probe_outside.txt)",
+      "Shell(node -v)",
+      "Shell(npm:*)",
+      "Shell(uv:*)",
+      "Shell(rmdir /s /q C:\\Users\\sreek\\ragpdf-frontend 2>nul & mkdir C:\\Users\\sreek\\rag-frontend && echo done)",
+      "Shell(dir:*)",
+      "Shell(findstr:*)",
+      "Shell(curl -s http://127.0.0.1:8000/health)",
+      "Shell(echo.:*)",
+      "Shell(curl -s http://127.0.0.1:8000/openapi.json -o nul -w openapi_http=%%{http_code})"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}
