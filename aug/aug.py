@@ -15,7 +15,8 @@ load_dotenv()
 llm = ChatGroq(
             model="openai/gpt-oss-120b",
             api_key=os.getenv("GROQ_API_KEY"),
-            max_tokens=150,
+            max_tokens=1024,
+            reasoning_effort="low",
             temperature=0
         )
 
@@ -23,6 +24,15 @@ llm = ChatGroq(
 PROMPT = """Answer the question using only the context below.
 If the answer is not in the context, say you don't know.
 Give short and crip answer
+
+IMPORTANT:
+- Read the context carefully.
+- Distinguish between Normal, Warning, and Trip / Protection values.
+- Do not infer or guess values.
+- If the question is ambiguous, explicitly mention the ambiguity.
+- If multiple values could answer the question, explain the relevant values.
+- If the answer cannot be found in the context, say:
+  "I don't know based on the provided context."
 
 Context:
 {context}
@@ -46,7 +56,9 @@ def answer(question, results):
 
     return {
         "answer": response.content,
-        "sources": [hit.get("source") for hit in results],
+        "sources": list(
+            dict.fromkeys(hit.get("source") for hit in results if hit.get("source"))
+        ),
         "matches": results,
     }
 
