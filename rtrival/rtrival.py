@@ -59,9 +59,15 @@ def search(query: str, top_k: int = 2):
 
 
 if __name__ == "__main__":
-    hits = search("What is this document about?")
+    from aug.aug import answer
+
+    question = "What is february solar generation val?"
+    hits = search(question, top_k=5)
 
     for hit in hits:
-        print(f"[{hit['score']:.4f}] {hit['id']} ({hit['source']})")
+        print(f"[{hit['id']}] source={hit['source']} rrf={hit['rrf_score']:.4f}")
         print(hit["text"])
         print("-" * 40)
+
+    result = answer(question, hits)
+    print("Answer:", result["answer"])

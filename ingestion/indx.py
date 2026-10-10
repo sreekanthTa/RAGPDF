@@ -1,5 +1,9 @@
 
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from pinecone import Pinecone, ServerlessSpec
 from dotenv import load_dotenv
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
@@ -192,11 +196,21 @@ def index_markdown(markdown_path, chunk_size=400, overlap=50, id_prefix=None, so
 
 def main():
     currn_path = Path(__file__).resolve().parent
-    currnt_file = currn_path / "rn_output" / "document.md"
+    rn_output = currn_path / "rn_output"
 
-    stats = index_markdown(currnt_file)
-
+    stats = index_markdown(rn_output / "document.md", source="rn.pdf")
     print(stats)
+
+    picture_paths = sorted((rn_output / "pictures").glob("*.png"))
+    if picture_paths:
+        from ingestion.vision import index_images
+
+        image_count = index_images(
+            picture_paths,
+            id_prefix=Path(rn_output / "document.md").stem,
+            source="rn.pdf",
+        )
+        print("images indexed:", image_count)
 
 
 if __name__ == "__main__":

@@ -95,6 +95,20 @@ def ingest(file: UploadFile = File(...)):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Indexing failed: {exc}") from exc
 
+    image_count = 0
+    picture_paths = sorted((output_dir / "pictures").glob("*.png"))
+    if picture_paths:
+        from ingestion.vision import index_images
+
+        try:
+            image_count = index_images(
+                picture_paths,
+                id_prefix=output_name,
+                source=file.filename,
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Image indexing failed: {exc}") from exc
+
     _cleanup(upload_path, output_dir)
 
     return {
@@ -104,5 +118,6 @@ def ingest(file: UploadFile = File(...)):
         "tables": len(result["tables"]),
         "pictures": len(result["pictures"]),
         "indexed": stats,
+        "images_indexed": image_count,
         "cleaned_up": True,
     }
