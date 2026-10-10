@@ -10,6 +10,7 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharac
 from fastembed import TextEmbedding
 import os
 import pickle
+import shutil
 from rank_bm25 import BM25Okapi
 
 
@@ -191,6 +192,23 @@ def index_markdown(markdown_path, chunk_size=400, overlap=50, id_prefix=None, so
         "index": INDEX_NAME,
         "chunks": upserted,
         "id_prefix": id_prefix or Path(markdown_path).stem,
+    }
+
+
+def clear_index():
+    index = create_or_return_index()
+
+    stats = index.describe_index_stats()
+    deleted = stats.total_vector_count
+    if deleted:
+        index.delete(delete_all=True)
+
+    if BM25_DIR.exists():
+        shutil.rmtree(BM25_DIR, ignore_errors=True)
+
+    return {
+        "deleted_vectors": deleted,
+        "bm25_cleared": True,
     }
 
 

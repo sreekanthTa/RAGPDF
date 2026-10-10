@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from ingestion.parser import extract_doc, save_results
 
@@ -121,3 +122,32 @@ def ingest(file: UploadFile = File(...)):
         "images_indexed": image_count,
         "cleaned_up": True,
     }
+
+
+class Question(BaseModel):
+    question: str
+    top_k: int = 5
+
+
+@app.post("/ask")
+def ask(payload: Question):
+    from aug.aug import ask as answer_question
+
+    try:
+        result = answer_question(payload.question, top_k=payload.top_k)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Answering failed: {exc}") from exc
+
+    return result
+
+
+@app.post("/reset")
+def reset():
+    from ingestion.indx import clear_index
+
+    try:
+        result = clear_index()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Reset failed: {exc}") from exc
+
+    return result
