@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from fastembed import TextEmbedding
 import os
+import pickle
+from rank_bm25 import BM25Okapi
 
 
 load_dotenv()
@@ -20,7 +22,8 @@ pinecone = Pinecone(
 )
 
 
-INDEX_NAME = "PDF_Index"
+INDEX_NAME = "rag-pdf-index"
+BM25_DIR = Path(__file__).resolve().parent.parent / "bm25_store"
 
 
 def create_or_return_index():
@@ -35,7 +38,6 @@ def create_or_return_index():
                 cloud="aws",
                 region="us-east-1"
             ),
-            wait=True,
         )
 
     pc_index = pinecone.index(INDEX_NAME)
@@ -110,6 +112,57 @@ def upsert_to_pinecone(chunks, index):
     return len(vectors)
 
 
+def create_bm25(chunks):
+    tokenized_chunks = [chunk.page_content.lower().split() for chunk in chunks]
+    return BM25Okapi(tokenized_chunks)
+
+
+def save_bm25(id_prefix, chunks):
+    BM25_DIR.mkdir(exist_ok=True)
+    with open(BM25_DIR / f"{id_prefix}.pkl", "wb") as f:
+        pickle.dump(chunks, f)
+
+
+def load_chunks(id_prefix=None):
+    if not BM25_DIR.exists():
+        return []
+
+    if id_prefix is not None:
+        files = [BM25_DIR / f"{id_prefix}.pkl"]
+    else:
+        files = sorted(BM25_DIR.glob("*.pkl"))
+
+    chunks = []
+    for file in files:
+        if file.exists():
+            with open(file, "rb") as f:
+                chunks.extend(pickle.load(f))
+
+    return chunks
+
+
+def search_bm25(query, top_k=5, id_prefix=None):
+    chunks = load_chunks(id_prefix)
+    if not chunks:
+        return []
+
+    # NOTE: BM25 is rebuilt on every call. Cache it if this becomes a hot path.
+    bm25 = create_bm25(chunks)
+    scores = bm25.get_scores(query.lower().split())
+
+    top_indices = scores.argsort()[-top_k:][::-1]
+
+    return [
+        {
+            "id": chunks[index].metadata["id"],
+            "text": chunks[index].page_content,
+            "source": chunks[index].metadata.get("source"),
+            "score": float(scores[index]),
+        }
+        for index in top_indices
+    ]
+
+
 def index_markdown(markdown_path, chunk_size=400, overlap=50, id_prefix=None, source=None):
     chunks = create_chunks(
         markdown_path,
@@ -118,7 +171,15 @@ def index_markdown(markdown_path, chunk_size=400, overlap=50, id_prefix=None, so
         id_prefix=id_prefix,
         source=source,
     )
+    save_bm25(id_prefix or Path(markdown_path).stem, chunks)
+    print(
+        "BM25 index created"
+    )
+
     embedded_chunks = create_embeddings(chunks)
+    print(
+        "Embeddings created"
+    )
     index = create_or_return_index()
     upserted = upsert_to_pinecone(embedded_chunks, index)
 

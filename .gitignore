@@ -14,6 +14,9 @@ uploads/
 outputs/
 ingestion/rn_output/
 
+# Persisted BM25 index
+bm25_store/
+
 .env
 
 .env*

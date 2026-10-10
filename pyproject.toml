@@ -17,5 +17,6 @@ dependencies = [
     "langgraph>=1.2.14",
     "pinecone>=10.0.0",
     "python-multipart",
+    "rank-bm25>=0.2.2",
     "uvicorn",
 ]
